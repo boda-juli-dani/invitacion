@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Asistencia - Boda Julián & Daniela</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Montserrat', sans-serif; background-color: #17171F; color: #F4F4F6; padding: 22px; }
+    .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #2C2C3A; }
+    .header h1 { font-size: 22px; font-weight: 700; color: #E5C39E; }
+    .search-input { background: #23232E; border: 1px solid #38384A; color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; width: 240px; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .metric-card { background: #20202B; border: 1px solid #313142; border-radius: 12px; padding: 14px 18px; }
+    .metric-title { font-size: 11px; color: #9A9AA8; text-transform: uppercase; letter-spacing: 1px; }
+    .metric-val { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .column { background: #1C1C26; border: 1px solid #2B2B38; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; min-height: 480px; }
+    .col-header { font-size: 14px; font-weight: 700; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 2px solid; display: flex; justify-content: space-between; }
+    .col-confirmed { border-color: #4EAA78; color: #4EAA78; }
+    .col-pending { border-color: #E5A84B; color: #E5A84B; }
+    .col-exterior { border-color: #60A5FA; color: #60A5FA; }
+    .col-rejected { border-color: #E25B5B; color: #E25B5B; }
+    .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
+    .guest-card { background: #252533; border: 1px solid #37374A; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .guest-info { display: flex; justify-content: space-between; align-items: baseline; }
+    .guest-name { font-weight: 600; font-size: 14px; }
+    .guest-group { font-size: 11px; color: #8F8FA0; }
+
+    /* Input editable de Pases */
+    .input-pases {
+      background: #333345; border: 1px solid #4A4A5A; border-radius: 4px;
+      color: #E5C39E; font-size: 11px; font-weight: 700; width: 38px;
+      text-align: center; padding: 2px 4px; outline: none; font-family: inherit;
+    }
+    .input-pases:focus { border-color: #E5C39E; }
+    .guest-badge-text { font-size: 11px; color: #E5C39E; font-weight: 600; }
+
+    .guest-actions { display: flex; gap: 5px; margin-top: 4px; }
+    .btn-action { flex: 1; border: none; padding: 6px 0; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .btn-conf { background: #4EAA78; color: white; }
+    .btn-pend { background: #E5A84B; color: black; }
+    .btn-ext { background: #3B82F6; color: white; }
+    .btn-rej { background: #E25B5B; color: white; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>📋 Control de Asistencia</h1>
+      <div style="font-size: 12px; color: #9A9AA8; margin-top: 2px;">Boda Julián & Daniela · 58 Invitaciones</div>
+    </div>
+    <div><input type="text" id="busqueda" class="search-input" placeholder="Buscar invitado o grupo..." oninput="render()"></div>
+  </div>
+  <div class="metrics">
+    <div class="metric-card"><div class="metric-title">Confirmados</div><div class="metric-val" id="metricConf" style="color: #4EAA78;">0 personas</div></div>
+    <div class="metric-card"><div class="metric-title">Pendientes</div><div class="metric-val" id="metricPend" style="color: #E5A84B;">0 personas</div></div>
+    <div class="metric-card"><div class="metric-title">En el exterior</div><div class="metric-val" id="metricExt" style="color: #60A5FA;">0 personas</div></div>
+    <div class="metric-card"><div class="metric-title">No Asisten</div><div class="metric-val" id="metricRej" style="color: #E25B5B;">0 personas</div></div>
+  </div>
+  <div class="board">
+    <div class="column"><div class="col-header col-confirmed"><span>✅ Confirmados</span><span id="badgeConf">0</span></div><div class="card-list" id="listConfirmados"></div></div>
+    <div class="column"><div class="col-header col-pending"><span>⏳ Pendientes</span><span id="badgePend">0</span></div><div class="card-list" id="listPendientes"></div></div>
+    <div class="column"><div class="col-header col-exterior"><span>✈️ En el exterior</span><span id="badgeExt">0</span></div><div class="card-list" id="listExterior"></div></div>
+    <div class="column"><div class="col-header col-rejected"><span>❌ No Asisten</span><span id="badgeRej">0</span></div><div class="card-list" id="listRechazados"></div></div>
+  </div>
+  <script>
+    const listaInicial = [{"id": "D-FAM-01", "nombre": "Inés", "pases": 1, "grupo": "Familia Dani", "estado": "Pendiente"}, {"id": "D-FAM-02", "nombre": "Fabri & Ile", "pases": 2, "grupo": "Familia Dani", "estado": "Pendiente"}, {"id": "D-FAM-03", "nombre": "Ana", "pases": 1, "grupo": "Familia Dani", "estado": "Pendiente"}, {"id": "D-FAM-04", "nombre": "Stella", "pases": 1, "grupo": "Familia Dani", "estado": "Pendiente"}, {"id": "D-FAM-05", "nombre": "Nicolás & Tiziano", "pases": 2, "grupo": "Familia Dani", "estado": "Pendiente"}, {"id": "D-FAM-06", "nombre": "David & Daniela", "pases": 2, "grupo": "Familia Dani", "estado": "Pendiente"}, {"id": "D-FAM-07", "nombre": "Donato & Cristina", "pases": 2, "grupo": "Familia Dani (Tíos)", "estado": "Pendiente"}, {"id": "D-FAM-08", "nombre": "Elena & Nelo", "pases": 2, "grupo": "Familia Dani (Tíos)", "estado": "Pendiente"}, {"id": "D-AMI-01", "nombre": "Mel", "pases": 1, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-02", "nombre": "Flor & Joe", "pases": 2, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-03", "nombre": "Maggie & Mila", "pases": 2, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-04", "nombre": "Rosie & Jinsoo", "pases": 2, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-05", "nombre": "Delfi", "pases": 1, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-06", "nombre": "Lari", "pases": 1, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-07", "nombre": "Iri", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-08", "nombre": "Palo", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-09", "nombre": "Mystic", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-10", "nombre": "Maru", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-11", "nombre": "Belu", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-12", "nombre": "Bri", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-13", "nombre": "Magui", "pases": 1, "grupo": "Pole Dani", "estado": "Pendiente"}, {"id": "D-AMI-14", "nombre": "Maca", "pases": 1, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-AMI-15", "nombre": "Joy", "pases": 1, "grupo": "Amigos Dani", "estado": "Pendiente"}, {"id": "D-LAB-01", "nombre": "Gonza & Jime", "pases": 2, "grupo": "Trabajo Dani", "estado": "Pendiente"}, {"id": "D-LAB-02", "nombre": "Tano", "pases": 1, "grupo": "Trabajo Dani", "estado": "Pendiente"}, {"id": "D-LAB-03", "nombre": "Tito & Lu", "pases": 2, "grupo": "Trabajo Dani", "estado": "Pendiente"}, {"id": "D-LAB-04", "nombre": "Brai", "pases": 1, "grupo": "Trabajo Dani", "estado": "Pendiente"}, {"id": "D-LAB-05", "nombre": "Sebas", "pases": 1, "grupo": "Trabajo Dani", "estado": "Pendiente"}, {"id": "D-LAB-06", "nombre": "Lean", "pases": 1, "grupo": "Trabajo Dani", "estado": "Pendiente"}, {"id": "J-FAM-01", "nombre": "Daniela & Gustavo", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-02", "nombre": "Agustina", "pases": 1, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-03", "nombre": "Flora & Fonso", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-04", "nombre": "Santos", "pases": 1, "grupo": "Familia Juli (Tíos abuelos)", "estado": "Pendiente"}, {"id": "J-FAM-05", "nombre": "Mariana & Paulina", "pases": 2, "grupo": "Familia Juli (Tíos abuelos)", "estado": "Pendiente"}, {"id": "J-FAM-06", "nombre": "Rosario, Néstor & Diego", "pases": 3, "grupo": "Familia Juli (Tíos abuelos)", "estado": "Pendiente"}, {"id": "J-FAM-07", "nombre": "Marina & Pablo", "pases": 2, "grupo": "Familia Juli (Tíos abuelos)", "estado": "Pendiente"}, {"id": "J-FAM-08", "nombre": "Gustavo & Silvana", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-09", "nombre": "Carla & Grecia", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-10", "nombre": "Dafne & Gonzalo", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-11", "nombre": "Fabián, Sandra & Flia", "pases": 6, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-12", "nombre": "Gabriela & Marcelo", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-13", "nombre": "Ezequiel", "pases": 1, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-FAM-14", "nombre": "Maxi & Belén", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "J-AMI-01", "nombre": "Gonzalo & Karen", "pases": 2, "grupo": "Amigos Juli", "estado": "Pendiente"}, {"id": "J-LAB-01", "nombre": "Flavio", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-02", "nombre": "María", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-03", "nombre": "Paula", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-04", "nombre": "Julia", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-05", "nombre": "Zaida", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-06", "nombre": "Eduardo", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-07", "nombre": "Sergio", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "J-LAB-08", "nombre": "Cecilia", "pases": 1, "grupo": "Trabajo Juli", "estado": "Pendiente"}, {"id": "DUD-01", "nombre": "Ale & Silvia", "pases": 2, "grupo": "Familia Juli", "estado": "Pendiente"}, {"id": "EXT-01", "nombre": "Prima de Dani & pareja", "pases": 2, "grupo": "Exterior (Bélgica)", "estado": "Exterior"}, {"id": "EXT-02", "nombre": "Ariadna & Flia", "pases": 4, "grupo": "Exterior (España)", "estado": "Exterior"}, {"id": "EXT-03", "nombre": "Denise", "pases": 1, "grupo": "Exterior (EE. UU.)", "estado": "Exterior"}, {"id": "EXT-04", "nombre": "Bettina & Evelyn", "pases": 2, "grupo": "Exterior (EE. UU.)", "estado": "Exterior"}, {"id": "EXT-05", "nombre": "Edgar, Susan & nenes", "pases": 4, "grupo": "Exterior (EE. UU.)", "estado": "Exterior"}];
+    // Se utiliza 'boda_panel_v20' para forzar la actualización de estructura y no tener bugs
+    let invitados = JSON.parse(localStorage.getItem('boda_panel_v20')) || listaInicial;
+
+    // Si abriste la web desde tu celu y confirmaste, esto lo trae al panel.
+    const webConfirmados = JSON.parse(localStorage.getItem('boda_asistencia') || '{}');
+    let huboCambiosWeb = false;
+
+    Object.values(webConfirmados).forEach(c => {
+      const idx = invitados.findIndex(i => i.id === c.id);
+      if (idx !== -1) {
+        invitados[idx].estado = c.estado;
+        invitados[idx].pases = c.pases; // Se actualiza a la cantidad que confirmaron
+        huboCambiosWeb = true;
+      }
+    });
+
+    // Se limpia la boda_asistencia web para que no pise futuras ediciones manuales tuyas
+    if (huboCambiosWeb) {
+        localStorage.setItem('boda_panel_v20', JSON.stringify(invitados));
+        localStorage.removeItem('boda_asistencia');
+    }
+
+    function guardar() { localStorage.setItem('boda_panel_v20', JSON.stringify(invitados)); render(); }
+
+    function cambiarEstado(id, nuevoEstado) { const inv = invitados.find(i => i.id === id); if (inv) { inv.estado = nuevoEstado; guardar(); } }
+
+    // Función para editar manualmente la cantidad de personas
+    function cambiarPases(id, nuevosPases) {
+      const inv = invitados.find(i => i.id === id);
+      if (inv) {
+        inv.pases = parseInt(nuevosPases) || 0;
+        guardar();
+      }
+    }
+
+    function render() {
+      const q = document.getElementById('busqueda').value.toLowerCase();
+      const listConf = document.getElementById('listConfirmados'); const listPend = document.getElementById('listPendientes');
+      const listExt = document.getElementById('listExterior'); const listRej = document.getElementById('listRechazados');
+
+      listConf.innerHTML = ''; listPend.innerHTML = ''; listExt.innerHTML = ''; listRej.innerHTML = '';
+      let totalC = 0, totalP = 0, totalE = 0, totalR = 0;
+
+      invitados.forEach(inv => {
+        if (q && !inv.nombre.toLowerCase().includes(q) && !inv.grupo.toLowerCase().includes(q)) return;
+        const card = document.createElement('div'); card.className = 'guest-card';
+        card.innerHTML = `
+          <div class="guest-info">
+            <span class="guest-name">${inv.nombre}</span>
+            <span style="display:flex; align-items:center; gap:4px;">
+              <input type="number" class="input-pases" value="${inv.pases}" min="0" onchange="cambiarPases('${inv.id}', this.value)">
+              <span class="guest-badge-text">pases</span>
+            </span>
+          </div>
+          <div class="guest-group">${inv.grupo} · <small>${inv.id}</small></div>
+          <div class="guest-actions">
+            <button class="btn-action btn-conf" onclick="cambiarEstado('${inv.id}', 'Confirmado')">✓ Confirma</button>
+            <button class="btn-action btn-pend" onclick="cambiarEstado('${inv.id}', 'Pendiente')">⏳ Espera</button>
+            <button class="btn-action btn-ext" onclick="cambiarEstado('${inv.id}', 'Exterior')">✈️ Ext</button>
+            <button class="btn-action btn-rej" onclick="cambiarEstado('${inv.id}', 'Rechazado')">✕ No va</button>
+          </div>
+        `;
+        if (inv.estado === 'Confirmado') { listConf.appendChild(card); totalC += inv.pases; }
+        else if (inv.estado === 'Exterior') { listExt.appendChild(card); totalE += inv.pases; }
+        else if (inv.estado === 'Rechazado') { listRej.appendChild(card); totalR += inv.pases; }
+        else { listPend.appendChild(card); totalP += inv.pases; }
+      });
+
+      document.getElementById('metricConf').innerText = totalC + " personas";
+      document.getElementById('metricPend').innerText = totalP + " personas";
+      document.getElementById('metricExt').innerText = totalE + " personas";
+      document.getElementById('metricRej').innerText = totalR + " personas";
+
+      document.getElementById('badgeConf').innerText = listConf.children.length;
+      document.getElementById('badgePend').innerText = listPend.children.length;
+      document.getElementById('badgeExt').innerText = listExt.children.length;
+      document.getElementById('badgeRej').innerText = listRech.children.length;
+    }
+    render();
+  </script>
+</body>
+</html>
